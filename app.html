@@ -122,7 +122,7 @@ function hud(){
 var frame=0;
 function loop(){
   if(!S.paused&&S.body){
-    var n=Math.round(30*S.speed*DT*8);
+    var n=Math.max(1,Math.round(4*S.speed));
     for(var i=0;i<n;i++) step();
     if(frame%2===0&&S.body) S.trail.push({x:S.body.x,y:S.body.y});
     if(S.trail.length>2600) S.trail.splice(0,600);
