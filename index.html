@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Lab - a gravity sandbox in your browser</title>
+<meta name="description" content="Orbit Lab is a real gravity simulator: drag to launch a satellite, and find the exact velocity that closes an orbit around the star.">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#05070f; color:#e6f2ff; min-height:100vh; }
+  .hero { min-height:92vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:40px 20px;
+    background:radial-gradient(ellipse 75% 50% at 50% 110%, #0ea5e955 0%, #0c4a6e30 40%, transparent 70%); }
+  .badge { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#38bdf8; border:1px solid #0c4a6e; border-radius:999px; padding:6px 16px; margin-bottom:26px; }
+  h1 { font-size:clamp(38px,7.5vw,72px); font-weight:800; line-height:1.06;
+    background:linear-gradient(120deg,#bae6fd,#38bdf8 45%,#0369a1); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { font-size:clamp(16px,2.4vw,21px); color:#5b7ba6; max-width:580px; margin-top:20px; line-height:1.55; }
+  .cta { margin-top:38px; display:inline-block; background:linear-gradient(135deg,#0ea5e9,#0369a1); color:#fff; font-size:18px; font-weight:700;
+    padding:16px 44px; border-radius:14px; text-decoration:none; box-shadow:0 10px 34px #0ea5e950; transition:transform .15s ease; }
+  .cta:hover { transform:translateY(-2px); }
+  .feats { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; max-width:900px; margin:0 auto; padding:20px 20px 70px; }
+  .f { background:#0a1322; border:1px solid #0e2238; border-radius:14px; padding:22px; }
+  .f .ic { font-size:26px; }
+  .f h3 { font-size:16px; margin:10px 0 6px; }
+  .f p { font-size:14px; color:#5b7ba6; line-height:1.5; }
+  footer { text-align:center; color:#2b4461; font-size:13px; padding:26px; border-top:1px solid #0e2238; }
+  footer a { color:#3f6a96; }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <div class="badge">iLanis App Factory &middot; idea #6</div>
+    <h1>Gravity doesn't forgive.<br>Find the orbit anyway.</h1>
+    <p class="sub">Orbit Lab is a real Newtonian gravity simulator. Drag to fling a satellite past the star, watch it crash, escape, or - if your aim is true - close the loop into a stable orbit. Live telemetry tells you how close you came.</p>
+    <a class="cta" href="app.html">Enter the lab</a>
+  </section>
+  <section class="feats">
+    <div class="f"><div class="ic">&#9737;</div><h3>Real physics</h3><p>Inverse-square gravity integrated at 240 Hz. The same math that keeps the ISS up - no faking.</p></div>
+    <div class="f"><div class="ic">&#128640;</div><h3>Live telemetry</h3><p>Speed, altitude, periapsis, apoapsis and revolutions swept update in real time as your satellite flies.</p></div>
+    <div class="f"><div class="ic">&#127919;</div><h3>Orbit detection</h3><p>Close a full revolution without kissing the star and the lab confirms your orbit - near-circular ones get extra credit.</p></div>
+    <div class="f"><div class="ic">&#127756;</div><h3>Presets and chaos</h3><p>Jump straight to circular and elliptical orbits, a slingshot pass, or roll the dice on a chaotic launch.</p></div>
+  </section>
+  <footer>No sign-up. No tracking. Everything runs in your browser.<br>
+  Built by the <a href="https://ilanis-agent.github.io/app-factory/">iLanis App Factory</a> &middot; <a href="https://github.com/iLanis-agent/orbit-lab">source on GitHub</a></footer>
+</body>
+</html>
