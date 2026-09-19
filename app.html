@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Lab - a gravity sandbox</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#05070f; color:#e6f2ff; min-height:100vh; overflow-x:hidden; }
+  .wrap { max-width:900px; margin:0 auto; padding:16px 12px 40px; }
+  h1 { font-size:20px; font-weight:800; text-align:center; }
+  h1 .o { color:#38bdf8; }
+  .tag { text-align:center; color:#5b7ba6; font-size:12px; margin:3px 0 12px; }
+  .stage { display:flex; gap:12px; flex-wrap:wrap; }
+  #spacebox { flex:1; min-width:280px; background:#020409; border:1px solid #0e2238; border-radius:14px; overflow:hidden; touch-action:none; position:relative; }
+  #space { display:block; width:100%; cursor:crosshair; }
+  #hint { position:absolute; top:10px; left:0; right:0; text-align:center; color:#38bdf8; font-size:12px; pointer-events:none; opacity:.8; }
+  .panel { width:230px; display:flex; flex-direction:column; gap:10px; }
+  .card { background:#0a1322; border:1px solid #0e2238; border-radius:12px; padding:12px; }
+  .card .k { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#3f6a96; margin-bottom:6px; }
+  .stat { display:flex; justify-content:space-between; font-size:13px; padding:2px 0; font-variant-numeric:tabular-nums; }
+  .stat .v { font-weight:700; }
+  #verdict { text-align:center; font-weight:700; font-size:14px; min-height:20px; }
+  .presets { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .presets button, .row button { background:#0d1a2e; border:1px solid #14304f; color:#e6f2ff; border-radius:8px; padding:8px 6px; font-size:12px; cursor:pointer; }
+  .presets button:hover, .row button:hover { border-color:#38bdf8; }
+  .row { display:flex; gap:6px; }
+  .row button { flex:1; }
+  .row button.on { background:#0c4a6e; border-color:#38bdf8; }
+  footer { text-align:center; color:#2b4461; font-size:12px; margin-top:20px; }
+  footer a { color:#3f6a96; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="o">&#9737;</span> Orbit Lab</h1>
+  <p class="tag">drag anywhere to launch a satellite - find the velocity that closes the loop</p>
+  <div class="stage">
+    <div id="spacebox"><canvas id="space"></canvas><div id="hint">press, drag, release to launch</div></div>
+    <div class="panel">
+      <div class="card"><div class="k">Telemetry</div>
+        <div class="stat"><span>speed</span><span class="v" id="tv">-</span></div>
+        <div class="stat"><span>altitude</span><span class="v" id="tr">-</span></div>
+        <div class="stat"><span>periapsis</span><span class="v" id="tp">-</span></div>
+        <div class="stat"><span>apoapsis</span><span class="v" id="ta">-</span></div>
+        <div class="stat"><span>angle swept</span><span class="v" id="ts">-</span></div>
+      </div>
+      <div class="card"><div id="verdict">-</div></div>
+      <div class="card"><div class="k">Presets</div><div class="presets">
+        <button data-p="circle">Circular</button>
+        <button data-p="ellipse">Elliptical</button>
+        <button data-p="sling">Slingshot</button>
+        <button data-p="chaos">Chaos</button>
+      </div></div>
+      <div class="row">
+        <button id="pause">Pause</button>
+        <button id="speed">1x</button>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+  </div>
+  <footer><a href="index.html">&#8592; About</a> &nbsp;|&nbsp; Orbit Lab &middot; idea #6 from the iLanis App Factory</footer>
+</div>
+<script>
+var cv=document.getElementById('space'), g=cv.getContext('2d');
+var MU=520000, STAR_R=16, DT=1/240;
+var S={body:null, trail:[], drag:null, paused:false, speed:1, rmin:1e9, rmax:0, swept:0, lastAng:null, verdict:'-'};
+var stars=[];
+function el(id){return document.getElementById(id);}
+function resize(){ var b=document.getElementById('spacebox'); var w=Math.min(640, b.clientWidth); cv.width=w; cv.height=Math.max(340,Math.min(560,Math.round(w*0.78))); seedStars(); drawScene(); }
+function seedStars(){ stars=[]; for(var i=0;i<90;i++) stars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.2+0.3,a:Math.random()*0.5+0.2}); }
+function cx(){return cv.width/2;} function cy(){return cv.height/2;}
+function launch(x,y,vx,vy){ S.body={x:x,y:y,vx:vx,vy:vy}; S.trail=[]; S.rmin=1e9; S.rmax=0; S.swept=0; S.lastAng=null; S.verdict='-'; }
+function step(){
+  var b=S.body; if(!b)return;
+  var dx=b.x-cx(), dy=b.y-cy(), r2=dx*dx+dy*dy, r=Math.sqrt(r2);
+  var a=MU/(r2||1), ax=-a*dx/r, ay=-a*dy/r;
+  b.vx+=ax*DT; b.vy+=ay*DT; b.x+=b.vx*DT; b.y+=b.vy*DT;
+  var nr=Math.sqrt((b.x-cx())*(b.x-cx())+(b.y-cy())*(b.y-cy()));
+  if(S.lastAng===null) S.lastAng=Math.atan2(dy,dx);
+  var na=Math.atan2(b.y-cy(),b.x-cx()), da=na-S.lastAng;
+  if(da>Math.PI)da-=2*Math.PI; if(da<-Math.PI)da+=2*Math.PI;
+  S.swept+=da; S.lastAng=na;
+  if(nr<S.rmin)S.rmin=nr; if(nr>S.rmax)S.rmax=nr;
+  if(nr<STAR_R+4){ S.verdict='CRASHED into the star'; S.body=null; return; }
+  if(nr>2200){ S.verdict='Escaped - velocity too high'; S.body=null; return; }
+  if(Math.abs(S.swept)>2*Math.PI && S.rmin>STAR_R+6){
+    S.verdict='CLOSED ORBIT'+(S.rmax/S.rmin<1.4?' - nearly circular!':'');
+  }
+}
+function drawScene(){
+  g.fillStyle='#020409'; g.fillRect(0,0,cv.width,cv.height);
+  stars.forEach(function(s){ g.globalAlpha=s.a; g.fillStyle='#9fc7ee'; g.beginPath(); g.arc(s.x*cv.width,s.y*cv.height,s.r,0,7); g.fill(); });
+  g.globalAlpha=1;
+  var grd=g.createRadialGradient(cx(),cy(),2,cx(),cy(),STAR_R*3);
+  grd.addColorStop(0,'rgba(250,204,21,0.95)'); grd.addColorStop(0.25,'rgba(250,204,21,0.55)'); grd.addColorStop(1,'rgba(250,204,21,0)');
+  g.fillStyle=grd; g.beginPath(); g.arc(cx(),cy(),STAR_R*3,0,7); g.fill();
+  g.fillStyle='#fde047'; g.beginPath(); g.arc(cx(),cy(),STAR_R,0,7); g.fill();
+  if(S.trail.length>1){
+    g.strokeStyle='rgba(56,189,248,0.55)'; g.lineWidth=1.5; g.beginPath();
+    g.moveTo(S.trail[0].x,S.trail[0].y);
+    for(var i=1;i<S.trail.length;i++) g.lineTo(S.trail[i].x,S.trail[i].y);
+    g.stroke();
+  }
+  if(S.body){ g.fillStyle='#e6f2ff'; g.beginPath(); g.arc(S.body.x,S.body.y,4,0,7); g.fill();
+    g.strokeStyle='rgba(230,242,255,0.4)'; g.beginPath(); g.arc(S.body.x,S.body.y,7,0,7); g.stroke(); }
+  if(S.drag){
+    g.strokeStyle='#38bdf8'; g.lineWidth=2; g.setLineDash([5,4]); g.beginPath();
+    g.moveTo(S.drag.x0,S.drag.y0); g.lineTo(S.drag.x1,S.drag.y1); g.stroke(); g.setLineDash([]);
+    g.fillStyle='#38bdf8'; g.beginPath(); g.arc(S.drag.x0,S.drag.y0,3,0,7); g.fill();
+  }
+}
+function hud(){
+  el('tv').textContent=S.body?Math.round(Math.hypot(S.body.vx,S.body.vy))+' px/s':'-';
+  el('tr').textContent=S.body?Math.round(Math.hypot(S.body.x-cx(),S.body.y-cy()))+' px':'-';
+  el('tp').textContent=S.rmin<1e9?Math.round(S.rmin)+' px':'-';
+  el('ta').textContent=S.rmax>0?Math.round(S.rmax)+' px':'-';
+  el('ts').textContent=(S.swept/(2*Math.PI)).toFixed(2)+' rev';
+  var v=el('verdict'); v.textContent=S.verdict;
+  v.style.color=S.verdict.indexOf('CLOSED')===0?'#34d399':(S.verdict==='-'?'#5b7ba6':'#f87171');
+}
+var frame=0;
+function loop(){
+  if(!S.paused&&S.body){
+    var n=Math.round(30*S.speed*DT*8);
+    for(var i=0;i<n;i++) step();
+    if(frame%2===0&&S.body) S.trail.push({x:S.body.x,y:S.body.y});
+    if(S.trail.length>2600) S.trail.splice(0,600);
+  }
+  drawScene(); if(frame%10===0) hud(); frame++;
+  requestAnimationFrame(loop);
+}
+function pos(e){ var r=cv.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+cv.addEventListener('pointerdown',function(e){ e.preventDefault(); cv.setPointerCapture(e.pointerId); var p=pos(e); S.drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; el('hint').style.opacity=0; });
+cv.addEventListener('pointermove',function(e){ if(!S.drag)return; var p=pos(e); S.drag.x1=p.x; S.drag.y1=p.y; });
+cv.addEventListener('pointerup',function(e){ if(!S.drag)return; var d=S.drag; S.drag=null;
+  var k=2.2; launch(d.x0,d.y0,(d.x0-d.x1)*k,(d.y0-d.y1)*k); });
+document.querySelectorAll('[data-p]').forEach(function(b){ b.onclick=function(){
+  el('hint').style.opacity=0;
+  var r=cv.height*0.32, v=Math.sqrt(MU/r);
+  if(b.dataset.p==='circle') launch(cx(),cy()-r, v,0);
+  if(b.dataset.p==='ellipse') launch(cx(),cy()-r, v*0.72,0);
+  if(b.dataset.p==='sling') launch(cx()-cv.width*0.3,cy()+cv.height*0.28, Math.sqrt(MU/(cv.width*0.3))*1.05,-40);
+  if(b.dataset.p==='chaos'){ var a=Math.random()*7, r2=cv.height*(0.25+Math.random()*0.2), vv=Math.sqrt(MU/r2)*(0.6+Math.random()*0.7);
+    launch(cx()+Math.cos(a)*r2, cy()+Math.sin(a)*r2, -Math.sin(a)*vv, Math.cos(a)*vv); }
+};});
+el('pause').onclick=function(e){ S.paused=!S.paused; e.target.textContent=S.paused?'Resume':'Pause'; e.target.classList.toggle('on',S.paused); };
+el('speed').onclick=function(e){ S.speed=S.speed>=4?1:S.speed*2; e.target.textContent=S.speed+'x'; };
+el('reset').onclick=function(){ S.body=null; S.trail=[]; S.rmin=1e9; S.rmax=0; S.swept=0; S.verdict='-'; el('hint').style.opacity=0.8; };
+window.addEventListener('resize',resize);
+resize(); loop();
+</script>
+</body>
+</html>
